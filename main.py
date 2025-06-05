@@ -41,19 +41,30 @@ def decode_segmentation(segmentation, num_classes=150):
 
 @app.post("/segment/")
 async def segment_image(file: UploadFile = File(...)):
+    print("Received file:", file.filename)
+
     image = Image.open(file.file).convert("RGB")
+    print("Image opened")
+
     inputs = feature_extractor(images=image, return_tensors="pt")
+    print("Feature extracted")
 
     with torch.no_grad():
         outputs = model(**inputs)
+    print("Model inference done")
+
     logits = outputs.logits
     seg = logits.argmax(dim=1)[0].detach().cpu().numpy()
+    print("Segmentation complete")
 
     seg_image = decode_segmentation(seg)
+    print("Image decoded")
 
     # Convert to bytes
     img_byte_arr = io.BytesIO()
     seg_image.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
+    print("Returning image")
 
     return StreamingResponse(img_byte_arr, media_type="image/png")
+
